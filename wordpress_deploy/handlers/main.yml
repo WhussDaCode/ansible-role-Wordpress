@@ -1,0 +1,13 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: restart apache
+  service:
+    name: apache2
+    state: restarted
+  when: ansible_distribution in ['Ubuntu', 'Debian']
+
+- name: start mariadb
+  shell: mysqld_safe --datadir=/var/lib/mysql &
+  async: 0
+  poll: 0
+

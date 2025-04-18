@@ -1,0 +1,12 @@
+- name: Installer Apache si la distribution est Debian
+  hosts: client1
+  become: true
+  tasks:
+    - name: Exécute une tâche si la condition est remplie
+      ansible.builtin.command: apt install apache2 -y
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Affiche un message de confirmation
+      ansible.builtin.debug:
+        msg: "Apache a été installé car le système est Debian"
+      when: ansible_facts['os_family'] == "Debian"

@@ -1,0 +1,7 @@
+---
+- name: Tester la connexion SSH avec tous les hôtes
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Ping Ansible
+      ansible.builtin.ping:

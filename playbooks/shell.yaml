@@ -1,0 +1,14 @@
+---
+- name: Utiliser le module shell pour afficher les lignes contenant 'root'
+  hosts: client1
+  gather_facts: no
+  become: true
+
+  tasks:
+    - name: Afficher les lignes avec shell
+      shell: cat /etc/passwd | grep root
+      register: result
+
+    - name: Afficher le résultat
+      debug:
+        var: result.stdout_lines

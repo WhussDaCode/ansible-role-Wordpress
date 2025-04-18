@@ -1,0 +1,6 @@
+---
+- name: Déploiement WordPress
+  hosts: wordpress
+  become: true
+  roles:
+    - wordpress_deploy

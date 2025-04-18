@@ -1,0 +1,14 @@
+---
+- name: Utiliser le module command pour afficher les lignes contenant 'root'
+  hosts: client1
+  gather_facts: no
+  become: true
+
+  tasks:
+    - name: Afficher les lignes avec command
+      command: cat /etc/passwd
+      register: result
+
+    - name: Filtrer avec grep
+      debug:
+        msg: "{{ result.stdout_lines | select('search', 'root') | list }}"

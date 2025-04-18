@@ -1,0 +1,21 @@
+---
+- name: Gérer Apache dans un conteneur sans systemd
+  hosts: client1
+  become: true
+  gather_facts: no
+
+  vars:
+    etat_apache: start
+
+  tasks:
+    - name: Demarrer apache
+      shell: apache2ctl start
+      when: etat_apache == "start"
+
+    - name: Arreter apache
+      shell: apache2ctl stop
+      when: etat_apache == "stop"
+
+    - name: Redemarrer apache
+      shell: apache2ctl restart
+      when: etat_apache == "restart"

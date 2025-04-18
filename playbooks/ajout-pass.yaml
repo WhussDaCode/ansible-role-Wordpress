@@ -1,0 +1,14 @@
+---
+- name: Définir le mot de passe de l'utilisateur Pierre
+  hosts: client1
+  become: true
+  gather_facts: no
+
+  vars:
+    hashed_pass: "{{ newpass | password_hash('sha512') }}"
+
+  tasks:
+    - name: Définir le mot de passe hashé pour Pierre
+      user:
+        name: Pierre
+        password: "{{ hashed_pass }}"

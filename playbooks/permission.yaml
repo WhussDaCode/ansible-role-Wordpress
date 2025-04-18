@@ -1,0 +1,10 @@
+---
+- name: Modifier les perm
+  hosts: ubuntu
+  become: true  # (si tu veux modifier un fichier root)
+
+  tasks:
+    - name: Changer les perms
+      file:
+        path: /root/vinci
+        mode: a+w

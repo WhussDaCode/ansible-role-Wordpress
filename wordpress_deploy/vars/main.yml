@@ -1,0 +1,4 @@
+#SPDX-License-Identifier: MIT-0
+---
+apache_service: "{{ 'apache2' if ansible_distribution in ['Ubuntu', 'Debian'] else 'httpd' }}"
+

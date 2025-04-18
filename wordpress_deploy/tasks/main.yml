@@ -1,0 +1,187 @@
+---
+- name: Set MySQL socket path per distribution
+  set_fact:
+    mysql_socket: "{{ '/run/mysqld/mysqld.sock' if ansible_distribution in ['Ubuntu', 'Debian'] else '/var/lib/mysql/mysql.sock' }}"
+
+- name: Install required packages on Ubuntu/Debian
+  apt:
+    name:
+      - apache2
+      - php
+      - libapache2-mod-php
+      - php-mysql
+      - mariadb-server
+      - wget
+      - unzip
+    state: present
+    update_cache: yes
+  when: ansible_distribution in ['Ubuntu', 'Debian']
+
+- name: Install required packages on Rocky Linux
+  dnf:
+    name:
+      - httpd
+      - php
+      - php-mysqlnd
+      - mariadb-server
+      - wget
+      - unzip
+    state: present
+  when: ansible_distribution == 'Rocky'
+
+- name: Start Apache on Ubuntu/Debian
+  service:
+    name: apache2
+    state: started
+  when: ansible_distribution in ['Ubuntu', 'Debian']
+  notify: restart apache
+
+- name: Start Apache on Rocky (no systemd)
+  shell: /usr/sbin/httpd &
+  async: 0
+  poll: 0
+  when: ansible_distribution == 'Rocky'
+
+- name: Start MariaDB in background
+  shell: mysqld_safe --datadir=/var/lib/mysql &
+  async: 0
+  poll: 0
+  notify: start mariadb
+
+- name: Start MariaDB alternative for Rocky
+  shell: /usr/sbin/mariadbd --datadir=/var/lib/mysql --user=mysql &
+  when: ansible_distribution == 'Rocky'
+
+- name: Wait for MariaDB socket
+  wait_for:
+    path: "{{ mysql_socket }}"
+    state: present
+    timeout: 30
+
+- name: Wait for MariaDB port (Rocky only)
+  wait_for:
+    host: 127.0.0.1
+    port: 3306
+    state: started
+    timeout: 30
+  when: ansible_distribution == 'Rocky'
+
+# Secure MariaDB
+- name: Set root password for MariaDB
+  shell: mysql -S {{ mysql_socket }} -uroot -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '{{ mysql_root_password }}';"
+  ignore_errors: yes
+  failed_when: false
+
+- name: Remove anonymous MySQL users
+  shell: mysql -S {{ mysql_socket }} -uroot -p{{ mysql_root_password }} -e "DELETE FROM mysql.user WHERE User='';"
+  register: remove_anonymous
+  retries: 3
+  delay: 5
+  until: remove_anonymous.rc == 0
+
+- name: Drop test database
+  shell: mysql -S {{ mysql_socket }} -uroot -p{{ mysql_root_password }} -e "DROP DATABASE IF EXISTS test;"
+  register: drop_test_db
+  retries: 3
+  delay: 5
+  until: drop_test_db.rc == 0
+
+- name: Remove test DB permissions
+  shell: mysql -S {{ mysql_socket }} -uroot -p{{ mysql_root_password }} -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
+  register: remove_test_perms
+  retries: 3
+  delay: 5
+  until: remove_test_perms.rc == 0
+
+- name: Flush MySQL privileges
+  shell: mysql -S {{ mysql_socket }} -uroot -p{{ mysql_root_password }} -e "FLUSH PRIVILEGES;"
+  register: flush_privs
+  retries: 3
+  delay: 5
+  until: flush_privs.rc == 0
+
+# Create DB + user for WordPress
+- name: Create WordPress database
+  shell: mysql -S {{ mysql_socket }} -uroot -p{{ mysql_root_password }} -e "CREATE DATABASE IF NOT EXISTS wordpress;"
+  register: create_db
+  retries: 3
+  delay: 5
+  until: create_db.rc == 0
+
+- name: Create MySQL user for WordPress
+  shell: mysql -S {{ mysql_socket }} -uroot -p{{ mysql_root_password }} -e "CREATE USER IF NOT EXISTS 'example'@'localhost' IDENTIFIED BY 'examplePW';"
+  register: create_user
+  retries: 3
+  delay: 5
+  until: create_user.rc == 0
+
+- name: Grant privileges to WordPress user
+  shell: mysql -S {{ mysql_socket }} -uroot -p{{ mysql_root_password }} -e "GRANT ALL PRIVILEGES ON wordpress.* TO 'example'@'localhost';"
+  register: grant_privs
+  retries: 3
+  delay: 5
+  until: grant_privs.rc == 0
+
+- name: Final MySQL privileges flush
+  shell: mysql -S {{ mysql_socket }} -uroot -p{{ mysql_root_password }} -e "FLUSH PRIVILEGES;"
+  register: flush_final
+  retries: 3
+  delay: 5
+  until: flush_final.rc == 0
+
+# Install WordPress
+- name: Download WordPress archive
+  get_url:
+    url: https://wordpress.org/latest.zip
+    dest: /tmp/latest.zip
+
+- name: Unzip WordPress archive
+  unarchive:
+    src: /tmp/latest.zip
+    dest: /tmp/
+    remote_src: yes
+
+- name: Copy WordPress files to /var/www/html
+  shell: cp -r /tmp/wordpress/* /var/www/html/
+  notify: restart apache
+
+- name: Set permissions on /var/www/html
+  file:
+    path: /var/www/html
+    state: directory
+    recurse: yes
+    owner: www-data
+    group: www-data
+    mode: '0755'
+
+- name: Copy wp-config-sample.php to wp-config.php
+  copy:
+    src: /var/www/html/wp-config-sample.php
+    dest: /var/www/html/wp-config.php
+    remote_src: yes
+    force: no
+
+- name: Set DB name in wp-config.php
+  replace:
+    path: /var/www/html/wp-config.php
+    regexp: "database_name_here"
+    replace: "wordpress"
+
+- name: Set DB user in wp-config.php
+  replace:
+    path: /var/www/html/wp-config.php
+    regexp: "username_here"
+    replace: "example"
+
+- name: Set DB password in wp-config.php
+  replace:
+    path: /var/www/html/wp-config.php
+    regexp: "password_here"
+    replace: "examplePW"
+
+- name: Set permissions on wp-config.php
+  file:
+    path: /var/www/html/wp-config.php
+    owner: www-data
+    group: www-data
+    mode: '0640'

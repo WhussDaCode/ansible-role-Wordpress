@@ -1,0 +1,15 @@
+---
+- name: Déployer et exécuter un script pour créer test1
+  hosts: client1
+  become: true
+  gather_facts: no
+
+  tasks:
+    - name: Copier le script script1.sh
+      copy:
+        src: /root/script1.sh
+        dest: /root/script1.sh
+        mode: '0755'
+
+    - name: Exécuter le script pour créer test1
+      shell: /root/script1.sh

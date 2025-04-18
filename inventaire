@@ -1,0 +1,11 @@
+[ubuntu]
+client1 ansible_user=root ansible_ssh_pass=P@ssw0rd
+client2 ansible_user=root ansible_ssh_pass=P@ssw0rd
+
+[rocky]
+client3 ansible_user=root ansible_ssh_pass=P@ssw0rd
+client4 ansible_user=root ansible_ssh_pass=P@ssw0rd
+
+[wordpress:children]
+ubuntu
+rocky

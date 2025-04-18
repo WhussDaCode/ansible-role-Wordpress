@@ -1,0 +1,5 @@
+#SPDX-License-Identifier: MIT-0
+---
+mysql_root_password: examplerootPW
+mysql_socket_ubuntu: /run/mysqld/mysqld.sock
+mysql_socket_rocky: /var/lib/mysql/mysql.sock

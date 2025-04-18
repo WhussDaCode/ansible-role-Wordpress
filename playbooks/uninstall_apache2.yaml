@@ -1,0 +1,9 @@
+- name: Désinstaller Apache2 sur les hôtes Ubuntu
+  hosts: localhost
+  become: true
+  tasks:
+    - name: Installer apache2
+      apt:
+        name: apache2
+        state: absent
+        update_cache: yes

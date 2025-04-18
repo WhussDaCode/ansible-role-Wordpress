@@ -1,0 +1,16 @@
+- name: Met a jour un fichier de configuration Apache puis redemarre le service Apache uniquement si ce fichier est modifier.
+  hosts: client1
+  become: true
+
+  tasks:
+    - name: Copier le fichier index.html vers /var/www/html/
+      copy:
+        src: index.html
+        dest: /var/www/html/index.html
+      notify: Redemarrer Apache
+
+  handlers:
+    - name: Redemarrer Apache
+      service:
+        name: apache2
+        state: restarted
