@@ -1,6 +1,6 @@
 galaxy_info:
   role_name: wordpress
-  author: whussdacode
+  author: Whussdacode
   description: Role to install and configure WordPress
   license: MIT
   min_ansible_version: 2.9
